@@ -1,0 +1,43 @@
+public String createCometRequestAsString(CometRequest cometJobInfo) {
+    // Create the root element with the specified namespace
+    Element rootElement = new Element("root"); // Replace "root" with your actual root element name
+    Namespace namespace = Namespace.getNamespace("http://comet.morganstanley.com/namespace/jobsubmission");
+    rootElement.setNamespace(namespace);
+
+    // Create child elements and set their values based on CometRequest
+    Element fileElement = new Element("File", namespace).setText(cometJobInfo.getFileName());
+    Element batchElement = new Element("BatchDistribution", namespace);
+    Element jobIDElement = new Element("JobID", namespace).setText(cometJobInfo.getJobId());
+    Element appIDElement = new Element("ApplicationID", namespace).setText(dstnZKUtil.getZKConfigPropertyAsString(COMET_APP_ID));
+    batchElement.addContent(jobIDElement);
+    batchElement.addContent(appIDElement);
+
+    Element requestInfoElement = new Element("RequestInstance", namespace);
+    Element requestIDElement = new Element("RequestID", namespace).setText(UUID.randomUUID().toString());
+    Element requestTimeElement = new Element("RequestTime", namespace)
+            .setText(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(Calendar.getInstance().getTime()));
+    requestInfoElement.addContent(requestIDElement);
+    requestInfoElement.addContent(requestTimeElement);
+
+    // Build the XML structure
+    rootElement.addContent(fileElement);
+    rootElement.addContent(batchElement);
+    rootElement.addContent(requestInfoElement);
+
+    // Build the Document
+    Document doc = new Document(rootElement);
+
+    // Convert the JDOM Document to a string
+    return documentToString(doc);
+}
+
+private String documentToString(Document doc) {
+    try {
+        Format format = Format.getPrettyFormat();
+        XMLOutputter outputter = new XMLOutputter(format);
+        return outputter.outputString(doc);
+    } catch (Exception e) {
+        LOGGER.error("Error converting Document to String", e);
+        return null;
+    }
+}
