@@ -41,3 +41,39 @@ private String documentToString(Document doc) {
         return null;
     }
 }
+
+
+
+try {
+        URLConnection conn = url.openConnection();
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "text/plain");
+
+        try (var writer = new OutputStreamWriter(conn.getOutputStream())) {
+            writer.write(requestXml);
+            writer.flush();
+        }
+
+        int responseCode = ((HttpURLConnection) conn).getResponseCode();
+
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            Document responseDoc = new SAXBuilder().build(new InputStreamReader(conn.getInputStream()));
+
+            Element element = getCometResponseStatus(responseDoc);
+            String returnCode = element.getChildText("ReturnCode");
+            String returnStatus = element.getChildText("ReturnStatus");
+
+            LOGGER.info("Datawise Request | status of comet triggered with info: {}, returnCode: {}, returnStatus {}", cometJobInfo, returnCode, returnStatus);
+
+            if (!"0".equals(returnCode) && !"success".equals(returnStatus)) {
+                String errorMessage = cometUtil.getCometResponseError(responseDoc);
+                throw new DatawiseCometException("Datawise Request | Comet Sending failed " + errorMessage);
+            }
+        } else {
+            LOGGER.error("Unexpected HTTP response code: " + responseCode);
+            // Handle the error appropriately
+        }
+    } catch (IOException e) {
+        LOGGER.error("Datawise Request | Error when sending Comet job", e);
+        throw e;
+    }
